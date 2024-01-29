@@ -92,6 +92,7 @@ export const users = pgTable(
     name: varchar("name", { length: 256 }).notNull(),
     email: varchar("email", { length: 256 }).notNull(),
     used: boolean("used").default(false),
+    qrcode: varchar("qrcode", {length: 36}).notNull(),
     expireDate: timestamp("expireDate").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

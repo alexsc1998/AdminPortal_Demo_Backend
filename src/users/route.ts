@@ -21,4 +21,8 @@ router
   .get(errorCatcher(UserController.httpGetUser))
   .put(UserController.httpUpdateUser)
   .delete(errorCatcher(UserController.httpDeleteUser));
+
+router
+  .route('/check/:id')
+  .get(UserController.httpCheckQRCode);
 export { router as userRouter };

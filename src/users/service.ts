@@ -4,6 +4,11 @@ import { users } from "@/db/schema.js";
 import { ERRORS } from "@/utils/errors.js";
 import { logger } from "@/logger.js";
 import { SelectedFields, date } from "drizzle-orm/pg-core";
+import { generateRandomUuid } from "@/utils/helpers.js";
+import { message, transport } from '@/utils/send-email.js';
+
+import QRCode from 'qrcode';
+import moment from 'moment';
 
 export type CreateUser = {
   name: string;
@@ -11,9 +16,47 @@ export type CreateUser = {
   expireDate: Date;
 };
 
+export type UserWithQR = {
+  name: string;
+  email: string;
+  expireDate: Date;
+  qrcode: string;
+}
+
 export async function createUsers(body: CreateUser[]) {
   try {
-    await db.insert(users).values(body);
+    const usersData: UserWithQR[] = body.map((cuser) => {
+      const user: UserWithQR = {
+        name: cuser.name,
+        email: cuser.email,
+        expireDate: cuser.expireDate,
+        qrcode: generateRandomUuid(16, 'hex')
+      };
+      return user;
+    })
+
+    console.log(usersData);
+    await db.insert(users).values(usersData);
+
+    usersData.map(async (user) => {
+      const msg = await message({
+        id: user.qrcode,
+        email: user.email,
+        subject: 'Email activation',
+        name: user.name,
+        expireDate: moment(user.expireDate).format("YYYY-MM-DD HH:mm")
+      });
+
+      transport
+        .sendMail(msg)
+        .then((_) =>
+          logger.info(`user activation email sent to user with address ${user.email}`)
+        )
+        .catch((err) =>
+          logger.error(`sending user activation email for ${user.email} failed\n`, err)
+        );
+    })
+
     return { msg: "success" };
   } catch (error) {
     const err = error as Error;
@@ -29,7 +72,10 @@ export async function updateUser(body: CreateUser) {
   try {
     await db
       .update(users)
-      .set(body)
+      .set({
+        ...body,
+        qrcode: generateRandomUuid(16, 'hex')
+      })
       .where(eq(users.email, body.email));
     return { msg: "success" };
   } catch (error) {
@@ -100,12 +146,7 @@ export async function changeUserStatus({
 export async function getUserByEmail(email: string) {
   try {
     const user = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        expireDate: users.expireDate,
-      })
+      .select()
       .from(users)
       .where(eq(users.email, email));
     if (!user.length || !user[0].id) {
@@ -128,6 +169,33 @@ export async function deleteUser(id: string) {
       return { error: ERRORS.DELETE_FAILED };
     }
     return { message: result[0].id };
+  } catch (error) {
+    logger.error(error);
+    const err = error as Error;
+    if (err.message.includes("invalid input syntax for type uuid")) {
+      return { error: "invalid id" };
+    }
+    return { error: err.message };
+  }
+}
+
+export async function checkQRCode(qrId: string) {
+  try {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.qrcode, qrId));
+    
+    if (result.length > 0) {
+      const now = new Date();
+      const expireDate = result[0].expireDate;
+      if (now > expireDate) {
+        return { error: 'Expired!' };
+      }
+      return { user: result[0] };
+    } else {
+      return { error: 'Invalid id' };
+    }
   } catch (error) {
     logger.error(error);
     const err = error as Error;

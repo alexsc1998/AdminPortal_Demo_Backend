@@ -3,47 +3,62 @@ import { resetPasswordEmailTemplate } from './reset-password-email-template.js';
 import { activationEmailTemplate } from './activation-email-template.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import QRCode from 'qrcode';
+import { Readable } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 
 const __dirname = path.dirname(__filename);
 
-const message = ({
+const generateQRCode = async (data: string) => {
+  try {
+    const options = {
+      margin: 1,
+      scale: 4, // Adjust scale to get the desired size
+      width: 160 // Explicitly set the width
+    };
+
+    const qrCodeDataURL = await QRCode.toDataURL(data, options);
+    return qrCodeDataURL;
+  } catch (err) {
+    console.error(err);
+    return "";
+  }
+};
+
+const message = async ({
+  id,
+  name,
   email,
   subject,
-  token,
-  name,
-  reset,
-  userGroup,
+  expireDate
 }: {
+  id: string;
+  name: string;
   email: string;
   subject: string;
-  token: string;
-  name: string;
-  reset: boolean;
-  userGroup: string;
+  expireDate: string;
 }) => {
-  const pwdReset = resetPasswordEmailTemplate({
-    link: `${process.env.FRONT_END_URL}/change-password?token=${token}`,
-    name,
-  });
+  const link = "${process.env.FRONT_END_URL}/portal/onboarding/check/${id}";
+  const qrData = await generateQRCode(link);
 
   const accActivation = activationEmailTemplate({
-    link: `${process.env.FRONT_END_URL}/set-password?token=${token}`,
     name,
-    userGroup,
+    expireDate,
+    qrData,
+    link: `${process.env.FRONT_END_URL}/portal/onboarding/check/${id}`,
   });
+
   return {
     from: process.env.EMAIL_FROM,
     to: email,
     subject: subject,
     text: 'For clients with plaintext support only',
-    html: reset ? pwdReset : accActivation,
+    html: accActivation,
     attachments: [
       {
-        filename: 'frame-bg.png',
-        path: __dirname + '/frame-bg.png',
-        cid: 'frame', //same cid value as in the html img src
+        path: qrData,
+        cid: 'qrCodeImage'
       },
     ],
   };
