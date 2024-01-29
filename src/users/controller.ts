@@ -126,13 +126,5 @@ export async function httpCheckQRCode(
   const { id } = req.params;
   const result = await UserService.checkQRCode(id);
 
-  if (result.error) {
-    if (result.error === ERRORS.DELETE_FAILED) {
-      throw createHttpError.NotFound(
-        "Failed to delete the user, make your the user id is valid"
-      );
-    }
-    throw createHttpError(result.error);
-  }
   res.status(200).json(result);
 }

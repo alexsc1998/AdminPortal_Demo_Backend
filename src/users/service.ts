@@ -198,11 +198,13 @@ export async function checkQRCode(qrId: string) {
       const now = new Date();
       const expireDate = result[0].expireDate;
       if (now > expireDate) {
-        return { error: 'Expired!' };
+        return { error: 'The onboarding link is expired!' };
+      } else if(result[0].used === true) {
+        return { error: 'The onboarding link is used!' };
       }
       return { user: result[0] };
     } else {
-      return { error: 'Invalid id' };
+      return { error: 'Invalid onboarding link' };
     }
   } catch (error) {
     logger.error(error);
