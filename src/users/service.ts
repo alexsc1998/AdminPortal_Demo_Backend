@@ -204,7 +204,7 @@ export async function checkQRCode(qrId: string) {
       }
       return { user: result[0] };
     } else {
-      return { error: 'Invalid onboarding link' };
+      return { error: 'The onboarding link is expired!' };
     }
   } catch (error) {
     logger.error(error);
