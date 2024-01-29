@@ -23,6 +23,25 @@ export type UserWithQR = {
   qrcode: string;
 }
 
+const sendEmailToUser = async (user: UserWithQR) => {
+  const msg = await message({
+    id: user.qrcode,
+    email: user.email,
+    subject: 'Affin Bank Onboarding',
+    name: user.name,
+    expireDate: moment(user.expireDate).format("YYYY-MM-DD HH:mm")
+  });
+
+  transport
+    .sendMail(msg)
+    .then((_) =>
+      logger.info(`user activation email sent to user with address ${user.email}`)
+    )
+    .catch((err) =>
+      logger.error(`sending user activation email for ${user.email} failed\n`, err)
+    );
+}
+
 export async function createUsers(body: CreateUser[]) {
   try {
     const usersData: UserWithQR[] = body.map((cuser) => {
@@ -35,26 +54,10 @@ export async function createUsers(body: CreateUser[]) {
       return user;
     })
 
-    console.log(usersData);
     await db.insert(users).values(usersData);
 
-    usersData.map(async (user) => {
-      const msg = await message({
-        id: user.qrcode,
-        email: user.email,
-        subject: 'Affin Bank Onboarding',
-        name: user.name,
-        expireDate: moment(user.expireDate).format("YYYY-MM-DD HH:mm")
-      });
-
-      transport
-        .sendMail(msg)
-        .then((_) =>
-          logger.info(`user activation email sent to user with address ${user.email}`)
-        )
-        .catch((err) =>
-          logger.error(`sending user activation email for ${user.email} failed\n`, err)
-        );
+    usersData.map((user) => {
+      sendEmailToUser(user);
     })
 
     return { msg: "success" };
@@ -70,13 +73,18 @@ export async function createUsers(body: CreateUser[]) {
 
 export async function updateUser(body: CreateUser) {
   try {
+    const updatedUser: UserWithQR = {
+      ...body,
+      qrcode: generateRandomUuid(16, 'hex')
+    };
+
     await db
       .update(users)
-      .set({
-        ...body,
-        qrcode: generateRandomUuid(16, 'hex')
-      })
+      .set(updatedUser)
       .where(eq(users.email, body.email));
+    
+    sendEmailToUser(updatedUser);
+
     return { msg: "success" };
   } catch (error) {
     const err = error as Error;
