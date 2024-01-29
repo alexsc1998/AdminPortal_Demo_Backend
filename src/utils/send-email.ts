@@ -39,7 +39,7 @@ const message = async ({
   subject: string;
   expireDate: string;
 }) => {
-  const link = "${process.env.FRONT_END_URL}/portal/onboarding/check/${id}";
+  const link = `${process.env.FRONT_END_URL}/portal/onboarding/check/${id}`;
   const qrData = await generateQRCode(link);
 
   const accActivation = activationEmailTemplate({

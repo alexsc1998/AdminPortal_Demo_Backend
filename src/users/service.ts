@@ -42,7 +42,7 @@ export async function createUsers(body: CreateUser[]) {
       const msg = await message({
         id: user.qrcode,
         email: user.email,
-        subject: 'Email activation',
+        subject: 'Affin Bank Onboarding',
         name: user.name,
         expireDate: moment(user.expireDate).format("YYYY-MM-DD HH:mm")
       });
