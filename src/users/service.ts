@@ -208,10 +208,6 @@ export async function checkQRCode(qrId: string) {
     }
   } catch (error) {
     logger.error(error);
-    const err = error as Error;
-    if (err.message.includes("invalid input syntax for type uuid")) {
-      return { error: "invalid id" };
-    }
-    return { error: err.message };
+    return { error: "The onboarding link is used or expired!" };
   }
 }

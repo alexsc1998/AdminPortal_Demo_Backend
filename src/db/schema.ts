@@ -96,11 +96,11 @@ export const users = pgTable(
     expireDate: timestamp("expireDate").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (users) => {
-    return {
-      emailIndex: uniqueIndex("email_idx").on(users.email),
-    };
-  }
+  // (users) => {
+  //   return {
+  //     emailIndex: uniqueIndex("email_idx").on(users.email),
+  //   };
+  // }
 );
 
 export type User = InferModel<typeof users>;
